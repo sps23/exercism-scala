@@ -1,38 +1,43 @@
 object MatchingBrackets {
 
-  case class Counts(nBracket: Int, nBrace: Int, nParen: Int) {
+  case class BracketsStack(brackets: List[Char], matchFailed: Boolean) {
 
-    def increment(c: Char): Counts = Counts.increment(this, c)
+    def increment(c: Char): BracketsStack = BracketsStack.increment(this, c)
 
-    val isPaired: Boolean = nBracket == 0 && nBrace == 0 && nParen == 0
-    val cannotBePaired: Boolean = nBracket < 0 || nBrace < 0 || nParen < 0
+    val isPaired: Boolean = brackets.isEmpty && !matchFailed
   }
 
-  object ZeroCounts extends Counts(0, 0, 0)
+  object EmptyBracketsStack$ extends BracketsStack(List.empty, false)
 
-  object Counts {
+  object BracketsStack {
 
-    def increment(counts: Counts, c: Char): Counts = c match {
-      case '[' => counts.copy(nBracket = counts.nBracket + 1)
-      case ']' => counts.copy(nBracket = counts.nBracket - 1)
-      case '{' => counts.copy(nBrace = counts.nBrace + 1)
-      case '}' => counts.copy(nBrace = counts.nBrace - 1)
-      case '(' => counts.copy(nParen = counts.nParen + 1)
-      case ')' => counts.copy(nParen = counts.nParen - 1)
-      case _   => counts
+    def increment(bracketsStack: BracketsStack, char: Char): BracketsStack = {
+
+      def matchBracket(Bracket: Char): BracketsStack = bracketsStack.brackets match {
+        case Bracket :: tail => BracketsStack(tail, matchFailed = false)
+        case _ => BracketsStack(bracketsStack.brackets, matchFailed = true)
+      }
+
+      char match {
+        case c @ ('[' | '{' | '(') => BracketsStack(c :: bracketsStack.brackets, matchFailed = false)
+        case ']'                   => matchBracket('[')
+        case '}'                   => matchBracket('{')
+        case ')'                   => matchBracket('(')
+        case _                     => bracketsStack
+      }
     }
   }
 
   def isPaired(input: String): Boolean = {
 
     @scala.annotation.tailrec
-    def iter(in: List[Char], counts: Counts): Counts = in match {
-      case _ if counts.cannotBePaired => counts
-      case List()                     => counts
-      case head :: tail               => iter(tail, counts.increment(head))
+    def iter(in: List[Char], bracketsStack: BracketsStack): BracketsStack = in match {
+      case _ if bracketsStack.matchFailed => bracketsStack
+      case List()                            => bracketsStack
+      case head :: tail                      => iter(tail, bracketsStack.increment(head))
     }
 
-    val counts = iter(input.toList, ZeroCounts)
+    val counts = iter(input.toList, EmptyBracketsStack$)
     counts.isPaired
   }
 }
